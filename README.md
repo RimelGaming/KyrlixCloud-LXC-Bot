@@ -20,8 +20,9 @@ Python Discord bot for deploying and managing LXD/LXC VPS containers from Discor
 ## Install
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/kyrlix-vps-discord-bot.git
-cd kyrlix-vps-discord-bot
+mkdir vps-bot
+cd vps-bot
+git clone https://github.com/RimelGaming/KyrlixCloud-LXC-Bot
 sudo bash installer.sh
 ```
 
