@@ -3,9 +3,22 @@ set -euo pipefail
 APP_NAME="kyrlix-vps-discord-bot"
 INSTALL_DIR="/opt/$APP_NAME"
 SERVICE_NAME="$APP_NAME.service"
+REPO_URL="https://github.com/RimelGaming/KyrlixCloud-LXC-Bot"
 
 if [[ $EUID -ne 0 ]]; then echo "Run: sudo bash installer.sh"; exit 1; fi
 
+printf '\033[36m'
+cat <<'BANNER'
+ _  __                _  _          ____  _                      _ 
+| |/ /  _   _  _ __  | |(_)__  __  / ___|| |  ___   _   _   __| |
+| ' /  | | | || '__| | || |\ \/ / | |    | | / _ \ | | | | / _` |
+| . \  | |_| || |    | || | >  <  | |___ | || (_) || |_| || (_| |
+|_|\_\  \__, ||_|    |_||_|/_/\_\  \____||_| \___/  \__,_| \__,_|
+        |___/
+BANNER
+printf '\033[0m'
+echo "                                              made by Rimel"
+echo
 echo "=== KyrlixCloud VPS Discord Bot Installer ==="
 read -rp "Discord bot token: " DISCORD_TOKEN
 while [[ -z "$DISCORD_TOKEN" ]]; do read -rp "Discord bot token: " DISCORD_TOKEN; done
@@ -23,13 +36,20 @@ read -rp "Enable LXD SSH port forwarding? [Y/n]: " FORWARD; FORWARD=${FORWARD:-Y
 [[ "$FORWARD" =~ ^[Nn]$ ]] && ENABLE_PORT_FORWARD=false || ENABLE_PORT_FORWARD=true
 
 apt-get update
-apt-get install -y python3 python3-venv python3-pip lxd
+apt-get install -y git python3 python3-venv python3-pip lxd
 USER_NAME="${SUDO_USER:-root}"
 usermod -aG lxd "$USER_NAME" || true
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-mkdir -p "$INSTALL_DIR"
-cp -a "$SCRIPT_DIR/." "$INSTALL_DIR/"
+# Download the bot straight into the install directory and use those files
+if [[ -d "$INSTALL_DIR/.git" ]]; then
+  git -C "$INSTALL_DIR" pull --ff-only
+elif [[ -e "$INSTALL_DIR" && -n "$(ls -A "$INSTALL_DIR" 2>/dev/null)" ]]; then
+  echo "$INSTALL_DIR exists and is not a git repo. Move or remove it, then re-run."
+  exit 1
+else
+  git clone "$REPO_URL" "$INSTALL_DIR"
+fi
+
 cd "$INSTALL_DIR"
 python3 -m venv .venv
 .venv/bin/pip install --upgrade pip
@@ -55,7 +75,12 @@ ENABLE_PORT_FORWARD=$ENABLE_PORT_FORWARD
 EOF
 chmod 600 .env
 
-sed -e "s/YOUR_LINUX_USER/$USER_NAME/g"     -e "s#WorkingDirectory=/opt/kyrlix-vps-discord-bot#WorkingDirectory=$INSTALL_DIR#g"     -e "s#EnvironmentFile=/opt/kyrlix-vps-discord-bot/.env#EnvironmentFile=$INSTALL_DIR/.env#g"     -e "s#ExecStart=/opt/kyrlix-vps-discord-bot/.venv/bin/python /opt/kyrlix-vps-discord-bot/bot.py#ExecStart=$INSTALL_DIR/.venv/bin/python $INSTALL_DIR/bot.py#g"     -e "s#ReadWritePaths=/opt/kyrlix-vps-discord-bot/data#ReadWritePaths=$INSTALL_DIR/data#g"     systemd/kyrlix-vps-discord-bot.service.example > "/etc/systemd/system/$SERVICE_NAME"
+sed -e "s/YOUR_LINUX_USER/$USER_NAME/g" \
+    -e "s#WorkingDirectory=/opt/kyrlix-vps-discord-bot#WorkingDirectory=$INSTALL_DIR#g" \
+    -e "s#EnvironmentFile=/opt/kyrlix-vps-discord-bot/.env#EnvironmentFile=$INSTALL_DIR/.env#g" \
+    -e "s#ExecStart=/opt/kyrlix-vps-discord-bot/.venv/bin/python /opt/kyrlix-vps-discord-bot/bot.py#ExecStart=$INSTALL_DIR/.venv/bin/python $INSTALL_DIR/bot.py#g" \
+    -e "s#ReadWritePaths=/opt/kyrlix-vps-discord-bot/data#ReadWritePaths=$INSTALL_DIR/data#g" \
+    systemd/kyrlix-vps-discord-bot.service.example > "/etc/systemd/system/$SERVICE_NAME"
 
 systemctl daemon-reload
 systemctl enable --now "$SERVICE_NAME"
