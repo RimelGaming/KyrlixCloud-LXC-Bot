@@ -1,0 +1,22 @@
+[Unit]
+Description=KyrlixCloud VPS Discord Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=YOUR_LINUX_USER
+Group=lxd
+WorkingDirectory=/opt/kyrlix-vps-discord-bot
+EnvironmentFile=/opt/kyrlix-vps-discord-bot/.env
+ExecStart=/opt/kyrlix-vps-discord-bot/.venv/bin/python /opt/kyrlix-vps-discord-bot/bot.py
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/opt/kyrlix-vps-discord-bot/data
+
+[Install]
+WantedBy=multi-user.target
